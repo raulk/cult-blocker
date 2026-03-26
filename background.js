@@ -47,7 +47,25 @@ async function ensureOffscreen() {
   });
   await offscreenCreating;
   offscreenCreating = null;
+
+  // Push saved thresholds to the offscreen document.
+  const data = await chrome.storage.local.get("cultThresholds");
+  if (data.cultThresholds) {
+    chrome.runtime.sendMessage({
+      type: "update-thresholds",
+      thresholds: data.cultThresholds,
+    });
+  }
 }
+
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.cultThresholds) {
+    chrome.runtime.sendMessage({
+      type: "update-thresholds",
+      thresholds: changes.cultThresholds.newValue || {},
+    });
+  }
+});
 
 // --- Pending classifications ---
 

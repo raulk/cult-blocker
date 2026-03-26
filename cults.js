@@ -24,6 +24,11 @@ const CULT_REGISTRY = [
     description: "Milady Maker, Remilio, and derivatives",
     color: "#e74c6f",
     enabled: true,
+    model: {
+      encoder: "models/mobileclip_image_encoder.onnx",
+      centroid: "models/milady_centroid.json",
+      threshold: 0.73,
+    },
     heuristic: {
       // Warm pastel skin, dark hair, anime saturation, limited palette
       skinHue: [10, 40],

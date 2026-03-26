@@ -1,0 +1,8 @@
+.DS_Store
+data/
+cult-blocker.zip
+
+# Old classifier artifacts (superseded by centroid approach)
+models/best_model.pt
+models/milady_classifier.onnx
+models/milady_classifier.onnx.data

@@ -66,10 +66,62 @@
       margin-top: 8px; line-height: 1.4;
     }
 
+    .clear-btn {
+      width: 100%;
+      padding: 6px 0;
+      background: none;
+      border: 1px solid #38444d;
+      border-radius: 6px;
+      color: #71767b;
+      font-size: 12px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .clear-btn:hover {
+      color: #e7e9ea;
+      border-color: #e7e9ea;
+    }
+
     .empty-state {
       font-size: 12px; color: #536471;
       text-align: center; padding: 12px 0;
       font-style: italic;
+    }
+
+    /* Threshold slider */
+    .threshold-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 2px 0 6px 20px;
+    }
+    .threshold-row label {
+      font-size: 11px;
+      color: #71767b;
+      white-space: nowrap;
+    }
+    .threshold-row input[type="range"] {
+      flex: 1;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: #38444d;
+      border-radius: 2px;
+      outline: none;
+    }
+    .threshold-row input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #e7e9ea;
+      cursor: pointer;
+    }
+    .threshold-row .threshold-val {
+      font-size: 11px;
+      font-weight: 600;
+      min-width: 28px;
+      text-align: right;
     }
   </style>
 </head>
@@ -92,8 +144,10 @@
 
   <div class="divider"></div>
 
+  <button id="clearCache" class="clear-btn">Clear cache</button>
+
   <div class="footer">
-    PoC color heuristic classifier. Swap <code>classifier.js</code> for real models.
+    MobileCLIP centroid classifier.
   </div>
 
   <script src="cults.js"></script>

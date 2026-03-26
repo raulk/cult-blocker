@@ -73,17 +73,29 @@
     if (!avatarImg) return;
 
     let pfpUrl = avatarImg.src;
-    pfpUrl = pfpUrl.replace(/_(?:mini|normal|bigger|200x200|400x400)\./, "_bigger.");
+    pfpUrl = pfpUrl.replace(/_(?:mini|normal|bigger|200x200|400x400)\./, "_200x200.");
 
-    const matches = await classifyPfp(pfpUrl);
-    if (matches.length === 0) return;
+    const results = await classifyPfp(pfpUrl);
+    if (results.length === 0) return;
 
-    // Use the highest-confidence match for display
-    const best = matches.reduce((a, b) => (a.confidence > b.confidence ? a : b));
+    const best = results.reduce((a, b) => (a.confidence > b.confidence ? a : b));
     const cult = CULT_REGISTRY.find((c) => c.id === best.cultId);
     if (!cult) return;
 
-    article.setAttribute(ATTR_HIDDEN, matches.map((m) => m.cultId).join(","));
+    const isMatch = best.confidence > (best.threshold ?? 0);
+    const label = `${cult.name} sim=${best.confidence.toFixed(3)} thresh=${best.threshold?.toFixed(3) ?? "?"}`;
+
+    // Annotate every post with a small tag
+    const tag = document.createElement("div");
+    tag.className = "cult-score-tag";
+    tag.style.setProperty("--cult-color", cult.color);
+    tag.textContent = label;
+    article.style.position = "relative";
+    article.appendChild(tag);
+
+    if (!isMatch) return;
+
+    article.setAttribute(ATTR_HIDDEN, results.map((m) => m.cultId).join(","));
     article.classList.add("cult-blocked");
 
     hiddenCounts[cult.id] = (hiddenCounts[cult.id] || 0) + 1;
@@ -95,7 +107,7 @@
     banner.innerHTML = `
       <span>
         <span class="cult-blocked-dot" style="background:${cult.color}"></span>
-        Post hidden — ${cult.name} PFP detected (${(best.confidence * 100).toFixed(0)}%)
+        Post hidden — ${label}
       </span>
       <button class="cult-reveal-btn">Show</button>
     `;

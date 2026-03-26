@@ -1,6 +1,15 @@
 // offscreen.js — bridges service worker messages to the classifier.
 
 chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === "update-thresholds") {
+    for (const cult of CULT_REGISTRY) {
+      if (cult.model && msg.thresholds[cult.id] !== undefined) {
+        cult.model.threshold = msg.thresholds[cult.id];
+      }
+    }
+    return;
+  }
+
   if (msg.type !== "offscreen-classify") return;
 
   CultClassifier.classifyImage(msg.imageUrl, msg.cultIds)
