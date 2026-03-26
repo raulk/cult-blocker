@@ -6,6 +6,7 @@ const hiddenCountEl = document.getElementById("hiddenCount");
 
 let settings = {};
 let thresholds = {};
+let allowlistItems = [];
 
 function renderCults() {
   cultListEl.innerHTML = "";
@@ -46,7 +47,7 @@ function renderCults() {
     cultListEl.appendChild(item);
 
     if (cult.model) {
-      const val = thresholds[cult.id] ?? cult.model.threshold ?? 0.73;
+      const val = thresholds[cult.id] ?? cult.model.threshold ?? 0.65;
       const row = document.createElement("div");
       row.className = "threshold-row";
       row.innerHTML = `
@@ -86,12 +87,58 @@ function saveAndBroadcast() {
   });
 }
 
+// --- Allowlist ---
+
+const allowlistInput = document.getElementById("allowlistInput");
+const allowlistAddBtn = document.getElementById("allowlistAdd");
+const allowlistTagsEl = document.getElementById("allowlistTags");
+
+function renderAllowlist() {
+  allowlistTagsEl.innerHTML = "";
+  for (const handle of allowlistItems) {
+    const tag = document.createElement("span");
+    tag.className = "allowlist-tag";
+    tag.innerHTML = `@${handle} <button data-handle="${handle}">&times;</button>`;
+    tag.querySelector("button").addEventListener("click", () => {
+      allowlistItems = allowlistItems.filter((h) => h !== handle);
+      saveAllowlist();
+      renderAllowlist();
+    });
+    allowlistTagsEl.appendChild(tag);
+  }
+}
+
+function addAllowlistEntry() {
+  const raw = allowlistInput.value.trim().replace(/^@/, "").toLowerCase();
+  if (!raw || allowlistItems.includes(raw)) return;
+  allowlistItems.push(raw);
+  allowlistInput.value = "";
+  saveAllowlist();
+  renderAllowlist();
+}
+
+function saveAllowlist() {
+  chrome.storage.local.set({ allowlist: allowlistItems });
+  chrome.tabs.query({ url: ["https://x.com/*", "https://twitter.com/*"] }, (tabs) => {
+    for (const tab of tabs) {
+      chrome.tabs.sendMessage(tab.id, { type: "allowlistChanged", allowlist: allowlistItems });
+    }
+  });
+}
+
+allowlistAddBtn.addEventListener("click", addAllowlistEntry);
+allowlistInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") addAllowlistEntry();
+});
+
 // --- Init ---
 
-chrome.storage.local.get(["cultSettings", "cultThresholds"], (data) => {
+chrome.storage.local.get(["cultSettings", "cultThresholds", "allowlist"], (data) => {
   settings = data.cultSettings || {};
   thresholds = data.cultThresholds || {};
+  allowlistItems = data.allowlist || [];
   renderCults();
+  renderAllowlist();
 });
 
 // Cache count

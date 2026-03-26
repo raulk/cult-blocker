@@ -100,7 +100,7 @@ const CultClassifier = (() => {
     const embedding = results[session.outputNames[0]].data;
 
     const similarity = cosineSimilarity(embedding, centroid);
-    const threshold = cult.model.threshold ?? 0.73;
+    const threshold = cult.model.threshold ?? 0.65;
     console.log(
       `[cult-blocker] ${cult.id}: similarity=${similarity.toFixed(4)} threshold=${threshold} embNorm=${Math.sqrt(embedding.reduce((s, v) => s + v * v, 0)).toFixed(4)}`
     );

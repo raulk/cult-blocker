@@ -88,7 +88,7 @@ image encoder.
   model: {
     encoder: "models/mobileclip_image_encoder.onnx",
     centroid: "models/penguin_centroid.json",
-    threshold: 0.73,
+    threshold: 0.65,
   },
 }
 ```

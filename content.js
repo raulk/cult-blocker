@@ -13,20 +13,30 @@
   // Per-cult hidden counts for badge
   let hiddenCounts = {};
   let enabledCults = {};
+  let allowlist = new Set();
 
   // --- Init enabled state from storage ---
 
   function loadEnabledState() {
     return new Promise((resolve) => {
-      chrome.storage.local.get("cultSettings", (data) => {
+      chrome.storage.local.get(["cultSettings", "allowlist"], (data) => {
         const settings = data.cultSettings || {};
         for (const cult of CULT_REGISTRY) {
           enabledCults[cult.id] =
             settings[cult.id] !== undefined ? settings[cult.id] : cult.enabled;
         }
+        allowlist = new Set((data.allowlist || []).map((h) => h.toLowerCase()));
         resolve();
       });
     });
+  }
+
+  function extractUsername(article) {
+    // X puts the handle in a link like /username inside the user avatar div.
+    const link = article.querySelector('div[data-testid="Tweet-User-Avatar"] a[href]');
+    if (!link) return null;
+    const match = link.getAttribute("href").match(/^\/([A-Za-z0-9_]+)/);
+    return match ? match[1].toLowerCase() : null;
   }
 
   function getEnabledCultIds() {
@@ -72,6 +82,9 @@
     const avatarImg = article.querySelector(AVATAR_SELECTOR);
     if (!avatarImg) return;
 
+    const username = extractUsername(article);
+    const isAllowlisted = username && allowlist.has(username);
+
     let pfpUrl = avatarImg.src;
     pfpUrl = pfpUrl.replace(/_(?:mini|normal|bigger|200x200|400x400)\./, "_200x200.");
 
@@ -82,14 +95,23 @@
     const cult = CULT_REGISTRY.find((c) => c.id === best.cultId);
     if (!cult) return;
 
-    const isMatch = best.confidence > (best.threshold ?? 0);
-    const label = `${cult.name} sim=${best.confidence.toFixed(3)} thresh=${best.threshold?.toFixed(3) ?? "?"}`;
+    const threshold = best.threshold ?? 0;
+    const isMatch = !isAllowlisted && best.confidence > threshold;
 
-    // Annotate every post with a small tag
+    // Color the score tag by proximity to threshold:
+    //   grey = far below, yellow = near, red = above
+    const delta = best.confidence - threshold;
+    let tagColor;
+    if (delta > 0) tagColor = "#ef4444";
+    else if (delta > -0.05) tagColor = "#eab308";
+    else tagColor = "#6b7280";
+
+    const label = `${cult.name} sim=${best.confidence.toFixed(3)} thresh=${threshold.toFixed(3)}`;
+
     const tag = document.createElement("div");
     tag.className = "cult-score-tag";
-    tag.style.setProperty("--cult-color", cult.color);
-    tag.textContent = label;
+    tag.style.color = tagColor;
+    tag.textContent = isAllowlisted ? `${label} [allowed]` : label;
     article.style.position = "relative";
     article.appendChild(tag);
 
@@ -147,6 +169,10 @@
   // --- Listen for settings changes from popup ---
 
   chrome.runtime.onMessage.addListener((msg) => {
+    if (msg.type === "allowlistChanged") {
+      allowlist = new Set((msg.allowlist || []).map((h) => h.toLowerCase()));
+    }
+
     if (msg.type === "cultSettingsChanged") {
       enabledCults = { ...msg.settings };
 

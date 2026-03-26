@@ -27,7 +27,7 @@ const CULT_REGISTRY = [
     model: {
       encoder: "models/mobileclip_image_encoder.onnx",
       centroid: "models/milady_centroid.json",
-      threshold: 0.73,
+      threshold: 0.65,
     },
     heuristic: {
       // Warm pastel skin, dark hair, anime saturation, limited palette
