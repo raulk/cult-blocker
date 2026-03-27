@@ -4,10 +4,21 @@ Chrome extension that hides posts on X from accounts with cult-affiliated PFPs.
 Uses MobileCLIP2-S0 embeddings with per-cult centroids for classification.
 Supports multiple cults with independent toggles and adjustable thresholds.
 
-## Quickstart
+## Install from release
+
+1. Download `cult-blocker.zip` from the
+   [latest release](https://github.com/raulk/cult-blocker/releases/latest)
+2. Unzip it somewhere permanent
+3. Open `chrome://extensions/`, enable "Developer mode" (top right)
+4. Click "Load unpacked" and select the unzipped directory
+
+Navigate to https://x.com. The extension downloads its model (~43 MB) on first
+run and caches it locally. Toggle cults on/off via the extension popup.
+
+## Build from source
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/raulk/cult-blocker.git
 cd cult-blocker
 just setup
 ```
