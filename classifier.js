@@ -6,21 +6,80 @@
 const CultClassifier = (() => {
   const MODEL_INPUT_SIZE = 224;
   const HEURISTIC_SIZE = 64;
-  // Cached ONNX sessions keyed by model path.
+  // Cached ONNX sessions keyed by encoder key.
   const sessions = new Map();
+  // In-flight session creation promises (deduplicates concurrent requests).
+  const sessionPromises = new Map();
   // Cached centroids keyed by JSON path.
   const centroids = new Map();
 
-  async function getSession(modelPath) {
-    if (sessions.has(modelPath)) return sessions.get(modelPath);
+  // --- IndexedDB model cache (persists downloaded ONNX across sessions) ---
 
-    const url = chrome.runtime.getURL(modelPath);
-    ort.env.wasm.wasmPaths = chrome.runtime.getURL("lib/");
-    const session = await ort.InferenceSession.create(url, {
-      executionProviders: ["wasm"],
+  function openModelDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open("cult-blocker-models", 1);
+      req.onupgradeneeded = () => req.result.createObjectStore("models");
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
     });
-    sessions.set(modelPath, session);
-    return session;
+  }
+
+  async function fetchModelBuffer(url) {
+    const db = await openModelDB();
+
+    const cached = await new Promise((resolve) => {
+      const tx = db.transaction("models", "readonly");
+      const req = tx.objectStore("models").get(url);
+      req.onsuccess = () => resolve(req.result ?? null);
+      req.onerror = () => resolve(null);
+    });
+    if (cached) {
+      console.log(`[cult-blocker] Model loaded from cache (${(cached.byteLength / 1e6).toFixed(1)} MB)`);
+      return cached;
+    }
+
+    console.log(`[cult-blocker] Downloading model from ${url}...`);
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`Model download failed: ${resp.status}`);
+    const buffer = await resp.arrayBuffer();
+
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction("models", "readwrite");
+      tx.objectStore("models").put(buffer, url);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+
+    console.log(`[cult-blocker] Model cached (${(buffer.byteLength / 1e6).toFixed(1)} MB)`);
+    return buffer;
+  }
+
+  // --- ONNX session management ---
+
+  async function getSession(encoderKey) {
+    if (sessions.has(encoderKey)) return sessions.get(encoderKey);
+    if (sessionPromises.has(encoderKey)) return sessionPromises.get(encoderKey);
+
+    const promise = (async () => {
+      ort.env.wasm.wasmPaths = chrome.runtime.getURL("lib/");
+
+      const source = encoderKey.startsWith("http")
+        ? new Uint8Array(await fetchModelBuffer(encoderKey))
+        : chrome.runtime.getURL(encoderKey);
+
+      return ort.InferenceSession.create(source, {
+        executionProviders: ["wasm"],
+      });
+    })();
+
+    sessionPromises.set(encoderKey, promise);
+    try {
+      const session = await promise;
+      sessions.set(encoderKey, session);
+      return session;
+    } finally {
+      sessionPromises.delete(encoderKey);
+    }
   }
 
   async function getCentroid(centroidPath) {

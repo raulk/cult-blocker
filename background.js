@@ -98,13 +98,13 @@ async function handleClassify(imageUrl, cultIds) {
       id,
     });
 
+    // Long timeout to accommodate first-run model download from HF.
     setTimeout(() => {
       if (pending.has(id)) {
         pending.delete(id);
-        setCachedResult(imageUrl, []);
         resolve({ matches: [] });
       }
-    }, 10000);
+    }, 120000);
   });
 }
 

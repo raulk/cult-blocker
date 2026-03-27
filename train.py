@@ -249,30 +249,18 @@ def compute_centroid(
 # ---------------------------------------------------------------------------
 
 
-class _ImageEncoder(torch.nn.Module):
-    """Wraps the CLIP visual backbone with L2 normalization."""
-
-    def __init__(self, visual: torch.nn.Module):
-        super().__init__()
-        self.visual = visual
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        emb = self.visual(x)
-        return emb / emb.norm(dim=-1, keepdim=True)
-
-
 def export_onnx(clip_model: torch.nn.Module, output_dir: Path):
     log.info("Exporting image encoder to ONNX...")
     clip_model = clip_model.cpu()
 
-    encoder = _ImageEncoder(clip_model.visual)
-    encoder.eval()
+    visual = clip_model.visual
+    visual.eval()
 
     dummy = torch.randn(1, 3, 224, 224)
     onnx_path = output_dir / "mobileclip_image_encoder.onnx"
 
     torch.onnx.export(
-        encoder,
+        visual,
         dummy,
         str(onnx_path),
         input_names=["image"],

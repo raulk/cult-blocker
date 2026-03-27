@@ -12,7 +12,7 @@ cd cult-blocker
 just setup
 ```
 
-This fetches the ONNX runtime WASM files and verifies the models are present.
+This fetches the ONNX runtime WASM files and verifies the centroid is present.
 Then load the extension in Chrome:
 
 1. Open `chrome://extensions/`
@@ -23,10 +23,11 @@ Navigate to https://x.com. Toggle cults on/off via the extension popup.
 
 ## How it works
 
-Each cult has a CLIP centroid vector computed from reference PFP images. At
-runtime, the extension embeds each profile picture with MobileCLIP2-S0 (ONNX,
-running in WASM) and computes cosine similarity against the centroid. Posts
-above the threshold get hidden behind a banner that shows the similarity score.
+Each cult has a CLIP centroid vector computed from reference PFP images. On
+first run, the extension downloads the MobileCLIP2-S0 image encoder (~43 MB)
+from Hugging Face and caches it in IndexedDB. At runtime it embeds each profile
+picture (ONNX, running in WASM) and computes cosine similarity against the
+centroid. Posts above the threshold get hidden behind a banner.
 
 The classifier runs entirely in the browser. No images leave the machine.
 
@@ -86,15 +87,16 @@ image encoder.
   color: "#3b82f6",
   enabled: false,
   model: {
-    encoder: "models/mobileclip_image_encoder.onnx",
+    encoder: "https://huggingface.co/plhery/mobileclip2-onnx/resolve/main/onnx/s0/vision_model.onnx",
     centroid: "models/penguin_centroid.json",
     threshold: 0.65,
   },
 }
 ```
 
-All cults share the same ONNX encoder; only the centroid differs. The popup
-and classifier pick up new entries automatically.
+All cults share the same ONNX encoder (downloaded from Hugging Face on first
+run); only the centroid differs. The popup and classifier pick up new entries
+automatically.
 
 ## Architecture
 
@@ -111,8 +113,9 @@ background.js       Service worker. Routes messages, manages the
 offscreen.html/js   Offscreen document. Runs ONNX inference outside
                     X's CSP sandbox.
 
-classifier.js       Loads ONNX encoder, embeds PFPs, computes cosine
-                    similarity against per-cult centroids.
+classifier.js       Downloads and caches the ONNX encoder (IndexedDB),
+                    embeds PFPs, computes cosine similarity against
+                    per-cult centroids.
 
 popup.html/js       Extension popup. Per-cult toggles, threshold sliders,
                     cache management.
@@ -120,7 +123,7 @@ popup.html/js       Extension popup. Per-cult toggles, threshold sliders,
 train.py            Centroid computation pipeline (uv script, not shipped).
 ```
 
-## Files tracked with Git LFS
+## Model files
 
-`*.onnx` and `*.wasm` files are stored in Git LFS. After cloning, run
-`git lfs pull` if the files appear as pointers.
+The ONNX encoder is not checked in; it is downloaded from Hugging Face
+on first run and cached in IndexedDB.

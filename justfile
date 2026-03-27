@@ -1,14 +1,13 @@
 ort_version := "1.24.3"
 
 setup:
-    git lfs pull
     @echo "Checking ONNX Runtime Web {{ort_version}}..."
     @test -f lib/ort.min.js || just _fetch-ort
     @test -f lib/ort-wasm-simd-threaded.jsep.wasm || just _fetch-ort
-    @echo "Checking models..."
-    @test -f models/mobileclip_image_encoder.onnx || (echo "Missing models/mobileclip_image_encoder.onnx — run 'just all' to generate" && exit 1)
+    @echo "Checking centroid..."
     @test -f models/milady_centroid.json || (echo "Missing models/milady_centroid.json — run 'just all' to generate" && exit 1)
     @echo "Ready. Load this directory as an unpacked extension in chrome://extensions/"
+    @echo "The ONNX encoder will be downloaded from Hugging Face on first run."
 
 _fetch-ort:
     #!/usr/bin/env bash
@@ -32,7 +31,6 @@ package:
         *.js *.html *.css \
         icons/ \
         lib/ \
-        models/mobileclip_image_encoder.onnx \
         models/milady_centroid.json
 
 download *args:

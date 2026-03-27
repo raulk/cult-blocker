@@ -25,7 +25,7 @@ const CULT_REGISTRY = [
     color: "#e74c6f",
     enabled: true,
     model: {
-      encoder: "models/mobileclip_image_encoder.onnx",
+      encoder: "https://huggingface.co/plhery/mobileclip2-onnx/resolve/main/onnx/s0/vision_model.onnx",
       centroid: "models/milady_centroid.json",
       threshold: 0.65,
     },

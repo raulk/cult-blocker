@@ -10,7 +10,8 @@
   "host_permissions": [
     "https://x.com/*",
     "https://twitter.com/*",
-    "https://pbs.twimg.com/*"
+    "https://pbs.twimg.com/*",
+    "https://huggingface.co/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -45,8 +46,6 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "models/*.onnx",
-        "models/*.onnx.data",
         "models/*.json",
         "lib/*.wasm",
         "lib/*.mjs"
