@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Cult Blocker",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Hides posts on X from accounts sporting cult PFPs. Configurable per cult.",
   "permissions": [
     "storage",

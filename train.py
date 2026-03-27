@@ -24,9 +24,9 @@ No negatives needed. No training loop. Just:
   5. Save centroid as JSON
 
 At runtime in the extension:
-  1. Load ONNX image encoder
-  2. Preprocess PFP: resize 256, center crop 224, scale to [0,1]
-  3. Run inference to get embedding
+  1. Download ONNX image encoder from Hugging Face (cached in IndexedDB)
+  2. Preprocess PFP: resize to 256x256, scale to [0,1]
+  3. Run inference to get embedding, L2-normalize
   4. Cosine similarity against centroid
   5. Threshold (suggested: p5 of training distribution)
 
@@ -148,11 +148,19 @@ def compute_centroid(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     log.info("Loading MobileCLIP2-S0...")
-    model, _, preprocess = open_clip.create_model_and_transforms(
+    model, _, _ = open_clip.create_model_and_transforms(
         "MobileCLIP2-S0", pretrained="dfndr2b"
     )
     model = model.to(device).eval()
     log.info(f"Model loaded on {device}.")
+
+    # Match the HF ONNX export: resize to 256x256, no center crop, [0,1] pixels.
+    from torchvision import transforms
+
+    preprocess = transforms.Compose([
+        transforms.Resize((256, 256), interpolation=transforms.InterpolationMode.BICUBIC),
+        transforms.ToTensor(),
+    ])
 
     image_paths = collect_images(images_dir)
     if not image_paths:
@@ -256,7 +264,7 @@ def export_onnx(clip_model: torch.nn.Module, output_dir: Path):
     visual = clip_model.visual
     visual.eval()
 
-    dummy = torch.randn(1, 3, 224, 224)
+    dummy = torch.randn(1, 3, 256, 256)
     onnx_path = output_dir / "mobileclip_image_encoder.onnx"
 
     torch.onnx.export(

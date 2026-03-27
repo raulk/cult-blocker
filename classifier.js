@@ -4,7 +4,7 @@
 // Cults with only a `heuristic` field use the color-histogram scorer.
 
 const CultClassifier = (() => {
-  const MODEL_INPUT_SIZE = 224;
+  const MODEL_INPUT_SIZE = 256;
   const HEURISTIC_SIZE = 64;
   // Cached ONNX sessions keyed by encoder key.
   const sessions = new Map();
@@ -105,14 +105,7 @@ const CultClassifier = (() => {
 
     return new Promise((resolve, reject) => {
       img.onload = () => {
-        // Resize to 256, center-crop to 224 (matches training transforms).
-        if (size === MODEL_INPUT_SIZE) {
-          const s = 256;
-          const offset = (s - MODEL_INPUT_SIZE) / 2;
-          ctx.drawImage(img, -offset, -offset, s, s);
-        } else {
-          ctx.drawImage(img, 0, 0, size, size);
-        }
+        ctx.drawImage(img, 0, 0, size, size);
         resolve(ctx.getImageData(0, 0, size, size));
       };
       img.onerror = () => reject(new Error("Failed to load: " + url));
@@ -156,7 +149,13 @@ const CultClassifier = (() => {
     const session = await getSession(cult.model.encoder);
     const centroid = await getCentroid(cult.model.centroid);
     const results = await session.run({ [session.inputNames[0]]: input });
-    const embedding = results[session.outputNames[0]].data;
+    const raw = results[session.outputNames[0]].data;
+    // L2-normalize (HF export outputs unnormalized embeddings).
+    let norm = 0;
+    for (let i = 0; i < raw.length; i++) norm += raw[i] * raw[i];
+    norm = Math.sqrt(norm);
+    const embedding = new Float32Array(raw.length);
+    for (let i = 0; i < raw.length; i++) embedding[i] = raw[i] / norm;
 
     const similarity = cosineSimilarity(embedding, centroid);
     const threshold = cult.model.threshold ?? 0.65;

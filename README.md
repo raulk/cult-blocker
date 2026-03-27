@@ -100,7 +100,7 @@ image encoder.
   model: {
     encoder: "https://huggingface.co/plhery/mobileclip2-onnx/resolve/main/onnx/s0/vision_model.onnx",
     centroid: "models/penguin_centroid.json",
-    threshold: 0.65,
+    threshold: 0.70,
   },
 }
 ```
