@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ONNX Runtime Web
+        run: |
+          tmpdir=$(mktemp -d)
+          npm pack onnxruntime-web@1.24.3 --silent --pack-destination "$tmpdir"
+          tar xzf "$tmpdir"/onnxruntime-web-1.24.3.tgz -C "$tmpdir"
+          mkdir -p lib
+          cp "$tmpdir"/package/dist/ort.min.js lib/
+          cp "$tmpdir"/package/dist/ort-wasm-simd-threaded.mjs lib/
+          cp "$tmpdir"/package/dist/ort-wasm-simd-threaded.wasm lib/
+          cp "$tmpdir"/package/dist/ort-wasm-simd-threaded.jsep.mjs lib/
+          cp "$tmpdir"/package/dist/ort-wasm-simd-threaded.jsep.wasm lib/
+          rm -rf "$tmpdir"
+
+      - name: Package extension
+        run: |
+          zip -r cult-blocker.zip \
+            manifest.json \
+            *.js *.html *.css \
+            icons/ \
+            lib/ \
+            models/milady_centroid.json
+
+      - name: Release (tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: gh release create "${{ github.ref_name }}" cult-blocker.zip --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release (latest)
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        run: gh release upload latest cult-blocker.zip --clobber 2>/dev/null || gh release create latest cult-blocker.zip --title "Latest build" --notes "Rolling release from main. Updated on every push." --prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
